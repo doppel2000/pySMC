@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="csrf-token" content="{{ csrf_token() }}">
+		{% if title %}
+			<title>{{ title }} - pySMC</title>
+		{% else %}
+			<title>Welcome to pySMC</title>
+		{% endif %}
+		<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+		<!-- Popperjs -->
+		<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha256-BRqBN7dYgABqtY9Hd4ynE+1slnEw+roEPFzQ7TRRfcg=" crossorigin="anonymous"></script>
+		<!-- Bootstrap -->
+		<script src="{{ url_for('static', filename='bootstrap@5.3.3/dist/js/bootstrap.min.js') }}"></script>
+		<link href="{{ url_for('static', filename='bootstrap@5.3.3/dist/css/bootstrap.min.css') }}" rel="stylesheet" />
+		<link href="{{ url_for('static', filename='bootstrap@5.3.3/dist/font/bootstrap-icons.css') }}" rel="stylesheet" />
+		<!-- Tempus Dominus -->
+		<script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.9/dist/js/tempus-dominus.min.js" crossorigin="anonymous"></script>
+		<link href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.9.9/dist/css/tempus-dominus.min.css" rel="stylesheet"  crossorigin="anonymous" />
+		<!-- Font Awesome -->
+		<!-- <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet"> -->
+		<link href="{{ url_for('static', filename='font_awesome/v6/css/fontawesome.min.css') }}" rel="stylesheet" />
+		<link href="{{ url_for('static', filename='font_awesome/v6/css/brands.min.css') }}" rel="stylesheet" />
+		<link href="{{ url_for('static', filename='font_awesome/v6/css/solid.min.css') }}" rel="stylesheet" />
+		<link href="{{ url_for('static', filename='font_awesome/v6/css/regular.min.css') }}" rel="stylesheet" />
+		<!-- Grid.js -->
+		<link href="{{ url_for('static', filename='gridjs/dist/theme/mermaid.min.css') }}" rel="stylesheet" />
+		<script src="{{ url_for('static', filename='gridjs/dist/gridjs.umd.js') }}"></script>
+		<!-- flatpickr -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+		{% block head %}{% endblock %}
+	</head>
+  <body>
+	<nav class="navbar navbar-expand-lg bg-body-tertiary">
+	  <div class="container">
+		<a class="navbar-brand" href="{{ url_for('index') }}">pySMC</a>
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+		  <span class="navbar-toggler-icon"></span>
+		</button>
+		<div class="collapse navbar-collapse" id="navbarSupportedContent">
+		  <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href="{{ url_for('index') }}">Home</a>
+			</li>
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href="{{ url_for('planning') }}">Planning</a>
+			</li>
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href=".\admin">Admin</a>
+			</li>
+		  </ul>
+		  <ul class="navbar-nav mb-2 mb-lg-0">
+			{% if current_user.is_anonymous %}
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href="{{ url_for('login') }}">Login</a>
+			</li>
+			{% else %}
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href="{{ url_for('user', username=current_user.username) }}">Profile</a>
+			</li>
+			<li class="nav-item">
+			  <a class="nav-link" aria-current="page" href="{{ url_for('logout') }}">Logout</a>
+			</li>
+			{% endif %}
+		  </ul>
+		</div>
+	  </div>
+	</nav>
+    <div class="container mt-3">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-info" role="alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </body>
+  {% block script %}{% endblock %}
+</html>

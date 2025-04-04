@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Manage User Authorizations</h1>
+<form action="" method="post" novalidate>
+  {{ form.hidden_tag() }}
+  <p>
+    {{ form.username.label }}<br>
+    {{ form.username(size=32) }}
+    <input type="submit" name="action" value="Load User">
+    {% for error in form.username.errors %}
+    <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
+  </p>
+  <table>
+    <tr>
+      <th>Authorization</th>
+      <th>Granted</th>
+      <th>Active</th>
+    </tr>
+    {% for authorization in form.authorizations %}
+    <tr class="auth-row">
+      <td>{{ authorization.auth_name.data }}</td>
+      <td>{{ authorization.granted }}</td>
+      <td>{{ authorization.granted.data }}</td>
+      <td>{{ authorization.active }}</td>
+      <td>{{ authorization.active.data }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p><input type="submit" name="action" value="Update Authorizations"></p>
+</form>
+
+<script>
+  document.getElementById('search').addEventListener('input', function(e) {
+    const filter = e.target.value.toLowerCase();
+    document.querySelectorAll('.auth-row').forEach(function(row) {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

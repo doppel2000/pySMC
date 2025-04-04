@@ -1,0 +1,860 @@
+{% extends "base.html" %}
+{% import 'bootstrap_wtf.html' as wtf %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+	<table><tr>
+		<td>
+			<div class="dropdown">
+				<button class="btn btn-outline-secondary btn-sm fs-6 dropdown-toggle" type="button" id="columnsLayout" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" data-placement="top" title="Show/Hide columns">
+					<i class="fa-solid fa-columns" aria-hidden="true"></i>
+				</button>
+				<ul class="dropdown-menu" aria-labelledby="columnsLayout" style="padding-left: 15px; width: 200px">
+						<li class="list-group-item" id="column-controls-id"><label class="form-check-label"><input id="display-id" class="form-check-input" type="checkbox" data-column="id" checked> Id</label></li>
+						<li class="list-group-item" id="column-controls-line"><label class="form-check-label"><input id="display-line" class="form-check-input" type="checkbox" data-column="line" checked> Line</label></li>
+						<li class="list-group-item" id="column-controls-wo"><label class="form-check-label"><input id="display-wo" class="form-check-input" type="checkbox" data-column="wo" checked> Work Order</label></li>
+						<li class="list-group-item" id="column-controls-batch"><label class="form-check-label"><input id="display-batch" class="form-check-input" type="checkbox" data-column="batch" checked> Batch</label></li>
+						<li class="list-group-item" id="column-controls-status"><label class="form-check-label"><input id="display-status" class="form-check-input" type="checkbox" data-column="status" checked> Status</label></li>
+						<li class="list-group-item" id="column-controls-state"><label class="form-check-label"><input id="display-state" class="form-check-input" type="checkbox" data-column="state" checked> State</label></li>
+						<li class="list-group-item" id="column-controls-planned-date"><label class="form-check-label"><input id="display-planned-date" class="form-check-input" type="checkbox" data-column="planned_date" checked> Planned Date</label></li>
+						<li class="list-group-item" id="column-controls-duration"><label class="form-check-label"><input id="display-duration" class="form-check-input" type="checkbox" data-column="duration" checked> Duration</label></li>
+						<li class="list-group-item" id="column-controls-planned-qty"><label class="form-check-label"><input id="display-planned-qty" class="form-check-input" type="checkbox" data-column="planned_qty" checked> Planned Qty</label></li>
+						<li class="list-group-item" id="column-controls-exact-qty"><label class="form-check-label"><input id="display-exact-qty" class="form-check-input" type="checkbox" data-column="exact_qty" checked> Exact Qty</label></li>
+						<li class="list-group-item" id="column-controls-remaining-qty"><label class="form-check-label"><input id="display-remaining-qty" class="form-check-input" type="checkbox" data-column="remaining_qty" checked> Remaining Qty</label></li>
+						<li class="list-group-item" id="column-controls-is-pq"><label class="form-check-label"><input id="display-is-pq" class="form-check-input" type="checkbox" data-column="is_pq" checked>Is PQ</label></li>
+						<li class="list-group-item" id="column-controls-product-type-id"><label class="form-check-label"><input id="display-product-type-id" class="form-check-input" type="checkbox" data-column="product_type_id" checked> Category</label></li>
+						<li class="list-group-item" id="column-controls-item"><label class="form-check-label"><input id="display-item" class="form-check-input" type="checkbox" data-column="item" checked> Item</label></li>
+						<li class="list-group-item" id="column-controls-description"><label class="form-check-label"><input id="display-description" class="form-check-input" type="checkbox" data-column="description" checked> Description</label></li>
+						<li class="list-group-item" id="column-controls-setup"><label class="form-check-label"><input id="display-setup" class="form-check-input" type="checkbox" data-column="setup" checked> Setup</label></li>
+						<li class="list-group-item" id="column-controls-prio-date"><label class="form-check-label"><input id="display-prio-date" class="form-check-input" type="checkbox" data-column="prio_date" checked> Prio Date</label></li>
+				</ul>
+			</div>
+		</td>
+		<td>
+			<button class="btn btn-outline-secondary btn-sm fs-6" onclick="jobFormHandler.showForm()" data-toggle="tooltip" data-placement="bottom" title="Add a new job" {% if not can_add %} disabled {% endif %}><i class="fa-solid fa-plus-circle" aria-hidden="true"></i></button>
+		</td>
+		<td>
+			<button type="button" class="btn btn-outline-secondary btn-sm fs-6" onclick="jobFormHandler.showUpdatePlanningDialog()" data-toggle="tooltip" data-placement="top" title="Update planning from file" {% if not can_update_planning %} disabled {% endif %}><i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i></button>
+		</td>
+		<td>
+			<button type="button" class="btn btn-outline-secondary btn-sm fs-6" data-toggle="tooltip" data-placement="top" title="Make projection" {% if not can_make_projection %} disabled {% endif %}><i class="fa-solid fa-chart-line" aria-hidden="true"></i></button>
+		</td>
+	</tr></table>
+	<div id="tableDiv" class="container-fluid"></div>
+</div>
+
+<!-- Basic Modal -->
+<div class="modal fade" id="basicModal" tabindex="-1" aria-labelledby="basicModalTitle" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="basicModalTitle">Confirmation</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body" id="basicModalBody">
+				Are you sure you want to proceed?
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Modal for status update confirmation -->
+<div class="modal fade" id="statusUpdateModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="statusUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="statusUpdateModalLabel">Update Status for Job <span id="jobBatch"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="container-fluid">
+                    <div class="row mb-3">
+                        <div class="col-5">Current status:</div>
+                        <div class="col-6"><span id="currentStatus"></span></div>
+                    </div>
+                    <div class="row mb-3 d-none" id="statusSelectDiv">
+                        <div class="col-5">
+                            <label for="statusSelect">Choose new status:</label>
+                        </div>
+                        <div class="col-6">
+                            <select id="statusSelect" class="form-select"></select>
+                        </div>
+                    </div>
+                    <div class="row mb-3 d-none" id="singleStatusUpdate">
+                        <div class="col-5">New status will be:</div>
+                        <div class="col-6"><span id="newStatus"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal for Job Form -->
+<div class="modal fade" id="jobFormModal" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="jobFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobFormModalLabel"><span id="jobFormModalTitle"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+			<form method="POST" class="form" id="jobForm">
+				<div class="modal-body">
+					{{ form.id(type="hidden") }}
+					<div class="container-fluid">
+						<!-- Row 1: Line ID, Work Order, Batch, Status -->
+						<div class="row g-3 mb-3">
+							<div class="col-md-3">
+								{{ form.line_id.label(class="form-label") }}
+								<select name="{{ form.line_id.name }}" id="{{ form.line_id.id }}" class="form-control">
+									{% for value, label in form.line_id.choices %}
+										{% if "(disabled)" in label %}
+											<option value="{{ value }}" selected disabled>{{ label }}</option>
+										{% else %}
+											<option value="{{ value }}" {% if form.line_id.data == value %}selected{% endif %}>{{ label }}</option>
+										{% endif %}
+									{% endfor %}
+								</select>
+								<div id="line_id_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.wo.label(class="form-label") }}
+								{{ form.wo(class="form-control") }}
+								<div id="wo_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.batch.label(class="form-label") }}
+								{{ form.batch(class="form-control") }}
+								<div id="batch_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.status_id.label(class="form-label") }}
+								{{ form.status_id(class="form-control") }}
+								<div id="status_id_feedback" class="invalid-feedback"></div>
+							</div>
+						</div>
+
+						<!-- Row 2: Planned Date, Planned Qty, Duration -->
+						<div class="row g-3 mb-3">
+							<div class="col-md-3">
+								{{ form.planned_date.label(class="form-label") }}
+								{{ form.planned_date(class="form-control datepicker") }}
+								<div id="planned_date_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.prio_date.label(class="form-label") }}
+								{{ form.prio_date(class="form-control datepicker") }}
+								<div id="prio_date_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.planned_qty.label(class="form-label") }}
+								{{ form.planned_qty(class="form-control") }}
+								<div id="planned_qty_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.duration.label(class="form-label") }}
+								{{ form.duration(class="form-control") }}
+								<div id="duration_feedback" class="invalid-feedback"></div>
+							</div>
+						</div>
+
+						<!-- Row 3: Checkboxes -->
+						<div class="row g-3 mb-3">
+							<div class="col-md-2 d-flex align-items-center">
+								<div class="form-check me-3">
+									{{ form.exact_qty(class="form-check-input") }}
+									{{ form.exact_qty.label(class="form-check-label") }}
+								</div>
+							</div>
+							<div class="col-md-2 d-flex align-items-center">
+								<div class="form-check me-3">
+									{{ form.remaining_qty(class="form-check-input") }}
+									{{ form.remaining_qty.label(class="form-check-label") }}
+								</div>
+							</div>
+							<div class="col-md-2 d-flex align-items-center">
+								<div class="form-check">
+									{{ form.is_pq(class="form-check-input") }}
+									{{ form.is_pq.label(class="form-check-label") }}
+								</div>
+							</div>
+						</div>
+
+						<!-- Row 4: Category, Item, description, setup -->
+						<div class="row g-3 mb-3">
+							<div class="col-md-2">
+								{{ form.product_type_id.label(class="form-label") }}
+								{{ form.product_type_id(class="form-control") }}
+								<div id="product_type_id_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-2">
+								{{ form.item.label(class="form-label") }}
+								{{ form.item(class="form-control") }}
+								<div id="item_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-5">
+								{{ form.description.label(class="form-label") }}
+								{{ form.description(class="form-control") }}
+								<div id="description_feedback" class="invalid-feedback"></div>
+							</div>
+							<div class="col-md-3">
+								{{ form.setup.label(class="form-label") }}
+								{{ form.setup(class="form-control") }}
+								<div id="setup_feedback" class="invalid-feedback"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					{{ form.submit(class="btn btn-primary") }}
+				</div>
+			</form>
+		</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+	const allowedForwardStatus = {{ allowed_status["forward"]|tojson }};
+	const allowedBackwardStatus = {{ allowed_status["backward"]|tojson }};
+	const tableDiv = document.getElementById('tableDiv');
+	
+	const updateUrl = (prev, query) => {
+		return prev + (prev.indexOf('?') >= 0 ? '&' : '?') + new URLSearchParams(query).toString();
+	};
+
+	const editableCellAttributes = (data, row, col) => {
+		if (row) {
+			return {contentEditable: 'true', 'data-element-id': row.cells[1].data};
+		}
+		else {
+			return {};
+		}
+	};
+
+	const columnsConfig = [
+		{ name: 'Action', sort:false, formatter: (cell, row) => gridjs.html(`<table style="margin-left:auto;margin-right:0"><tr>
+				${allowedBackwardStatus.includes(row.cells[18].data) ? `<td style="width:36px"><button class="btn btn-outline-danger btn-sm fs-6" data-toggle="tooltip" data-placement="bottom" title="Previous Status" onclick="statusUpdate(${row.cells[1].data}, 'backward')"><i class="fa-solid fa-circle-arrow-left" aria-hidden="true"></i></button></td>` : ''}
+				${allowedForwardStatus.includes(row.cells[18].data) ? `<td style="width:36px"><button class="btn btn-outline-success btn-sm fs-6" data-toggle="tooltip" data-placement="bottom" title="Next Status" onclick="statusUpdate(${row.cells[1].data}, 'forward')"><i class="fa-solid fa-circle-arrow-right" aria-hidden="true"></i></button></td>` : ''}
+				<td style="width:36px"><button class="btn btn-outline-primary btn-sm fs-6" data-toggle="tooltip" data-placement="bottom" title="Add Activity"><i class="fa-solid fa-gear" aria-hidden="true"></i></button></td>
+				{% if can_edit %} <td style="width:36px"><button class="btn btn-outline-dark btn-sm fs-6" onclick="jobFormHandler.showForm(${row.cells[1].data})" data-toggle="tooltip" data-placement="bottom" title="Edit record"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i></button></td> {% endif %}
+				{% if can_delete %} <td style="width:36px"><button class="btn btn-outline-dark btn-sm fs-6" onclick="jobFormHandler.showDeleteConfirmationDialog(${row.cells[1].data})" data-toggle="tooltip" data-placement="bottom" title="Delete record"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button></td> {% endif %}
+				</tr></table>`) },
+		{ id: 'id', name: 'Id', sort: false, hidden: false },
+		{ id: 'line', name: 'Line', hidden: false },
+		{ id: 'wo', name: 'Work Order', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'batch', name: 'Batch', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'status', name: 'Status', hidden: false },
+		{ id: 'state', name: 'State', hidden: false },
+		{ id: 'planned_date', name: 'Planned Date', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'duration', name: 'Duration', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'planned_qty', name: 'Planned Qty', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'exact_qty', name: 'Exact Qty', formatter: (cell) => gridjs.html(`<input class="form-check-input" type="checkbox" name="exact_qty" ${cell ? 'checked' : ''} {% if not can_edit_in_cell %} disabled {% endif %} >`), {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'remaining_qty', name: 'Remaining Qty', formatter: (cell) => gridjs.html(`<input class="form-check-input" type="checkbox" name="remaining_qty" ${cell ? 'checked' : ''} {% if not can_edit_in_cell %} disabled {% endif %} >`), {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'is_pq', name: 'Is PQ', formatter: (cell) => gridjs.html(`<input class="form-check-input" type="checkbox" name="is_pq" ${cell ? 'checked' : ''} {% if not can_edit_in_cell %} disabled {% endif %} >`), {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'product_type_id', name: 'Category', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'item', name: 'Product Item', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'description', name: 'Product Description', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'setup', name: 'Product Setup', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'prio_date', name: 'Prio Date', {% if can_edit_in_cell %} 'attributes': editableCellAttributes, {% endif %} hidden: false },
+		{ id: 'status_id', name: 'Status Id', sort: false, hidden: true },
+	];
+
+	// Constantes et configurations
+	const CONFIG = {
+		ENDPOINTS: {
+			SAVE: '/planning/save',
+			DELETE: '/planning/delete',
+			DATA: '/planning/job_data',
+		},
+		SELECTORS: {
+			FORM: '#jobForm',
+			MODAL: '#jobFormModal',
+			MODAL_TITLE: '#jobFormModalTitle',
+			APP_TOAST_CONTAINER: '#appToastContainer',
+			MODAL_TOAST_CONTAINER: '#modalToastContainer'
+		},
+		TITLES: {
+			NO_CHANGES: 'Save aborted',
+			ERROR: '',
+			NETWORK_ERROR: ''
+		},
+		MESSAGES: {
+			NO_CHANGES: 'No change detected',
+			ERROR: 'Unexpected error',
+			NETWORK_ERROR: 'Server connection error'
+		}
+	};
+
+	// Classe pour gérer le formulaire
+	class JobFormHandler {
+		constructor() {
+			this.modal = new bootstrap.Modal(document.querySelector(CONFIG.SELECTORS.MODAL));
+			this.basicModal = new bootstrap.Modal(document.getElementById("basicModal"));
+			this.confirmActionBtn = document.getElementById("confirmActionBtn");
+			this.form = document.querySelector(CONFIG.SELECTORS.FORM);
+			this.originalData = null;
+			this.initializeEventListeners();
+		}
+
+		initializeEventListeners() {
+			// Écouteur pour la soumission du formulaire
+			this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+		}
+
+		// Affiche le formulaire pour édition ou création
+		async showForm(jobId = null) {
+			try {
+				this.clearForm();
+				const titleElement = document.querySelector(CONFIG.SELECTORS.MODAL_TITLE);
+
+				if (jobId) {
+					await this.loadJobData(jobId);
+					titleElement.textContent = 'Job edition';
+				} else {
+					this.originalData = null;
+					titleElement.textContent = 'New job';
+				}
+
+				this.modal.show();
+			} catch (error) {
+				this.handleError(error);
+			}
+		}
+
+		showDeleteConfirmationDialog(jobID) {
+			// Set modal title and message
+			document.getElementById("basicModalTitle").textContent = "Delete job";
+			document.getElementById("basicModalBody").textContent = "Are you sure you want to delete this job?";
+
+			// Set the confirm button action
+			confirmActionBtn.onclick = function () {
+				jobFormHandler.deleteRecord(jobID);
+				jobFormHandler.basicModal.hide();
+			};
+
+			// Show the modal
+			this.basicModal.show();
+		}
+
+
+		showUpdatePlanningDialog() {
+			// Set modal title and message
+			document.getElementById("basicModalTitle").textContent = "Update Planning";
+			document.getElementById("basicModalBody").innerHTML = `
+				<form action="/planning/update" method="post" enctype="multipart/form-data">
+					<p>Select your planning file:</p>
+					{{ form.file }}
+					<input type="submit">
+					<br>
+				</form>`;
+
+			// Set the confirm button action
+			confirmActionBtn.onclick = function () {
+				alert ("Planning update ...");
+				jobFormHandler.basicModal.hide();
+			};
+
+			// Show the modal
+			this.basicModal.show();
+		}
+
+		// Function to delete a record
+		async deleteRecord(jobId) {
+			try {
+				const response = await fetch(`${CONFIG.ENDPOINTS.DELETE}?job_id=${jobId}`);
+				const result = await response.json();
+
+				if (response.ok) {
+					this.showToast(result.message, 'Job deleted', result.status);
+				} else {
+					if (response.status === 400 || response.status === 404) {
+						this.showToast(result.message , 'Error', result.status);
+					}
+					else {
+						this.showToast(result.message || 'Failed to delete job', 'Error', 'danger');
+					}
+				}
+				gridInstance.forceRender(); // Refresh the grid
+			}
+			catch (error) {
+				this.handleError(error);
+			}
+		}
+
+		// Charge les données d'un job existant
+		async loadJobData(jobId) {
+			try {
+				const response = await fetch(`${CONFIG.ENDPOINTS.DATA}?job_id=${jobId}`);
+				if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+				// Todo : ajouter toast après avoir configuré les messages dans la route
+
+				const data = await response.json();
+				this.originalData = data;
+				this.populateForm(data);
+			} catch (error) {
+				throw new Error(`Erreur lors du chargement des données: ${error.message}`);
+			}
+		}
+
+		// Remplit le formulaire avec les données
+		populateForm(data) {
+			const formData = new FormData(this.form);
+
+			Object.entries(data).forEach(([key, value]) => {
+				const input = this.form.querySelector(`[name="${key}"]`);
+				if (input) {
+					if (input.type === 'checkbox') {
+						input.checked = value;
+					} else if (input.type === 'datetime-local') {
+						// Conversion de la date ISO en format local
+						const date = new Date(value);
+						input.value = date.toISOString().slice(0, 16);
+					} else {
+						input.value = value;
+					}
+				}
+			});
+		}
+
+		// Gère la soumission du formulaire
+		async handleSubmit(event) {
+			event.preventDefault();
+
+			try {
+				this.clearValidationErrors();
+				const formData = new FormData(this.form);
+
+				// Vérification des changements si c'est une édition
+				if (this.originalData && !this.hasFormChanged(formData)) {
+					this.showToast(CONFIG.MESSAGES.NO_CHANGES, CONFIG.TITLES.NO_CHANGES, 'warning');
+					this.modal.hide();
+					return;
+				}
+
+				// Ajout du token CSRF
+				const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+				formData.append('csrf_token', csrfToken);
+
+				const response = await fetch(CONFIG.ENDPOINTS.SAVE, {
+					method: 'POST',
+					body: formData,
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
+
+				const result = await this.handleResponse(response);
+			
+				if (result.success) {
+					this.modal.hide();
+					// Recharger la table (garde le filtre et le tri (toujours ascendant même si descendant est choisi) mais pas la pagination)
+					gridInstance.forceRender();
+					this.showToast(result.message, 'Job saved', result.status);
+				}
+			} catch (error) {
+				this.handleError(error);
+			}
+		}
+
+		// Vérifie si le formulaire a été modifié
+		hasFormChanged(formData) {
+			if (!this.originalData) return true;
+
+			for (const [key, value] of formData.entries()) {
+				const originalValue = this.originalData[key];
+
+				// Conversion des valeurs pour comparaison
+				let formValue = value === '' ? null : value;
+				
+				// Conversion du 'y' si booléen
+				if (originalValue === true) {
+					formValue = formValue === 'y' ? 'true' : value;
+				}
+
+				if (String(formValue) !== String(originalValue)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// Gère la réponse du serveur
+		async handleResponse(response) {
+			const data = await response.json();
+
+			if (!response.ok) {
+				// Validation failed
+				if (response.status === 400) {
+					this.showValidationErrors(data.errors);
+					return {
+						success: false,
+						message: data.message,
+						status: data.status
+					};
+				}
+				else {
+					throw new Error(data.message || 'Server error');
+				}
+			}
+			else {
+				return {
+					success: true,
+					message: data.message,
+					status: data.status
+				};
+			}
+		}
+
+		// Affiche les erreurs de validation
+		showValidationErrors(errors) {
+			Object.entries(errors).forEach(([field, messages]) => {
+				const input = this.form.querySelector(`[id="${field}"]`);
+				const errorDiv = this.form.querySelector(`#${field}_feedback`);
+				if (input && errorDiv) {
+					input.classList.add('is-invalid');
+					errorDiv.innerHTML = messages.join("<br>");
+				}
+			});
+		}
+
+		// Nettoie le formulaire
+		clearForm() {
+			this.form.reset();
+			this.clearValidationErrors();
+		}
+
+		// Nettoie les erreurs de validation
+		clearValidationErrors() {
+			this.form.querySelectorAll('.is-invalid').forEach(element => {
+				element.classList.remove('is-invalid');
+			});
+
+			this.form.querySelectorAll('.invalid-feedback').forEach(element => {
+				element.textContent = '';
+			});
+		}
+
+		// Gestion des erreurs
+		handleError(error) {
+			console.error('Error:', error);
+			this.showToast(error.message || CONFIG.MESSAGES.ERROR, '', 'danger', CONFIG.SELECTORS.MODAL_TOAST_CONTAINER, false);
+		}
+
+		// Affiche une notification toast
+		showToast(message, title = '', type = 'info', target = CONFIG.SELECTORS.APP_TOAST_CONTAINER, autohide = true) {
+			const toastHtml = `
+            <div class="toast align-items-center fade animate text-white bg-${type} border-0" data-bs-autohide="${autohide}" role="alert" aria-live="assertive" aria-atomic="true">
+				<div class="toast-header"><i class="fa-solid fa-comment me-2" aria-hidden="true"></i><strong class="me-auto">pySMC</strong><small>${title}</small></div>
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>`;
+
+			const toastContainer = document.querySelector(target);
+			toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+			const toastElement = toastContainer.lastElementChild;
+			const toast = new bootstrap.Toast(toastElement);
+			toast.show();
+
+			// Supprime le toast après qu'il soit caché
+			toastElement.addEventListener('hidden.bs.toast', () => {
+				toastElement.remove();
+			});
+		}
+	}
+
+	// Initialisation
+	document.addEventListener('DOMContentLoaded', () => {
+		window.jobFormHandler = new JobFormHandler();
+	});
+
+	// HTML nécessaire pour les toasts
+	const appToastContainerHtml = `
+	<div id="appToastContainer" class="toast-container position-fixed bottom-0 end-0 p-4" style="z-index: 1050;"></div>`;
+	const modalToastContainerHtml = `
+	<div id="modalToastContainer" class="toast-container position-absolute bottom-0 end-0 p-2" style="z-index: 1050;"></div>`;
+
+	// Ajout du conteneur de toast au body si non présent
+	if (!document.querySelector(CONFIG.SELECTORS.APP_TOAST_CONTAINER)) {
+		document.body.insertAdjacentHTML('beforeend', appToastContainerHtml);
+	}
+	
+	// Ajout du conteneur de toast au modal si non présent
+	if (!document.querySelector(CONFIG.SELECTORS.MODAL_TOAST_CONTAINER)) {
+		document.querySelector(CONFIG.SELECTORS.FORM).insertAdjacentHTML('beforeend', modalToastContainerHtml);
+	}
+
+
+	function statusUpdate(jobId, direction) {
+		fetch(`/status_update?job_id=${jobId}&direction=${direction}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.error) {
+				alert(data.error);
+				return;
+			}
+
+			const statusUpdateModal = new bootstrap.Modal(document.getElementById('statusUpdateModal'));
+			document.getElementById('jobBatch').textContent = data.batch;
+			document.getElementById('currentStatus').textContent = data.current_status;
+
+			const statusSelect = document.getElementById('statusSelect');
+			statusSelect.innerHTML = '';
+
+			if (data.possible_statuses.length > 1) {
+				document.getElementById('singleStatusUpdate').classList.add('d-none');
+				document.getElementById('statusSelectDiv').classList.remove('d-none');
+				data.possible_statuses.forEach(status => {
+					const option = document.createElement('option');
+					option.value = status.id;
+					option.textContent = status.name;
+					statusSelect.appendChild(option);
+				});
+			} else if (data.possible_statuses.length === 1) {
+				document.getElementById('statusSelectDiv').classList.add('d-none');
+				document.getElementById('singleStatusUpdate').classList.remove('d-none')
+				document.getElementById('newStatus').textContent = data.possible_statuses[0].name;
+			} else {
+				alert('No status updates are available.');
+				return;
+			}
+
+			statusUpdateModal.show();
+
+			document.getElementById('confirmStatusUpdate').onclick = function() {
+				const newStatusId = data.possible_statuses.length > 1 ? statusSelect.value : data.possible_statuses[0].id;
+				const csrf_token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+				fetch('/status_update', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-CSRFToken': csrf_token
+					},
+					body: JSON.stringify({
+						job_id: jobId,
+						new_status_id: newStatusId
+					}),
+				})
+						.then(response => response.json())
+						.then(updateData => {
+							if (updateData.error) {
+								alert(updateData.error);
+							} else {
+								statusUpdateModal.hide();
+								gridInstance.forceRender();
+							}
+						})
+						.catch((error) => {
+							console.error('Error:', error);
+							alert('An error occurred while updating the status.');
+						});
+			};
+		})
+		.catch((error) => {
+			console.error('Error:', error);
+			alert('An error occurred while fetching possible statuses.');
+		});
+	}
+
+	function updateColumnVisibility() {
+	  	const selectedColumns = Array.from(document.querySelectorAll('[id^="column-controls-"] input[type="checkbox"]'))
+			.map(checkbox => ({
+				id: checkbox.getAttribute('data-column'),
+				hidden: !checkbox.checked
+			}));
+
+	  selectedColumns.forEach(col => {
+		  const column = columnsConfig.find(c => c.id === col.id);
+		  if (column) column.hidden = col.hidden;
+	  });
+	}
+
+	let gridInstance;
+
+	function createGrid() {
+	  	updateColumnVisibility();
+
+		gridInstance = new gridjs.Grid({
+		columns: columnsConfig,
+		style: {
+		  table: {
+			  'table-layout': 'auto'
+		  },
+		  th: {
+			  'text-align': 'center',
+			  'word-break': 'break-all'
+		  }
+		},
+		className: {
+			table: 'table table-striped'
+		},
+		server: {
+			url: '/api/data',
+			then: results => results.data,
+			total: results => results.total,
+		},
+		search: {
+			enabled: true,
+			debounceTimeout: 1000,
+			ignoreHiddenColumns: true,
+			server: {
+				url: (prev, search) => {
+					return updateUrl(prev, {search});
+				},
+			},
+		},
+		sort: {
+			enabled: true,
+			multiColumn: true,
+			server: {
+				url: (prev, columns) => {
+					const columnIds = ['', 'id', 'line', 'wo', 'batch', 'status', 'state', 'planned_date', 'duration', 'planned_qty', 'exact_qty', 'remaining_qty', 'is_pq', 'product_type_id', 'item', 'description', 'setup', 'prio_date'];
+					const sort = columns.map(col => (col.direction === 1 ? '+' : '-') + columnIds[col.index]);
+					return updateUrl(prev, {sort: sort.join(',')});
+				},
+			},
+		},
+		pagination: {
+			enabled: true,
+			page: 0,
+			resetPageOnUpdate: false,
+			limit: 10,
+			server: {
+				url: (prev, page, limit) => {
+					return updateUrl(prev, {start: page * limit, length: limit});
+				},
+			},
+		},
+		fixedHeader: true,
+	  }).render(document.getElementById("tableDiv"));
+	}
+
+	document.querySelectorAll('[id^="column-controls-"] input[type="checkbox"]').forEach(checkbox => {
+		checkbox.addEventListener('change', () => {
+			savePreferences();
+			updateGridColumnVisibility();
+		});
+	});
+
+	function savePreferences() {
+		const selectedColumns = Array.from(document.querySelectorAll('[id^="column-controls-"] input[type="checkbox"]:checked'))
+			.map(checkbox => checkbox.getAttribute('data-column'));
+		localStorage.setItem('visibleColumns', JSON.stringify(selectedColumns));
+	}
+
+	function loadPreferences() {
+		const savedColumns = JSON.parse(localStorage.getItem('visibleColumns'));
+		if (savedColumns) {
+			document.querySelectorAll('[id^="column-controls-"] input[type="checkbox"]').forEach(checkbox => {
+				checkbox.checked = savedColumns.includes(checkbox.getAttribute('data-column'));
+			});
+		}
+	}
+
+	function updateGridColumnVisibility() {
+		updateColumnVisibility();
+		gridInstance.updateConfig({
+			columns: columnsConfig
+		}).forceRender();
+	}
+
+	loadPreferences();
+	createGrid();
+
+	let savedValue;
+
+	tableDiv.addEventListener('mousedown', ev => {
+		if (ev.target.tagName === 'TD') {
+			if (ev.target.dataset.columnId === 'exact_qty' || ev.target.dataset.columnId === 'remaining_qty') {
+				ev.preventDefault();
+			}
+			else {
+				savedValue = ev.target.textContent;
+			}
+		}
+	});
+
+
+	tableDiv.addEventListener('change', ev => {
+		if (ev.target.type === 'checkbox') {
+			const csrf_token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+			fetch('/api/data', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRFToken': csrf_token
+				},
+				body: JSON.stringify({
+					id: ev.target.parentNode.parentNode.dataset.elementId,
+					[ev.target.parentNode.parentNode.dataset.columnId]: ev.target.checked ? 'true' : 'false'
+				}),
+			});
+		}
+	});
+
+	tableDiv.addEventListener('focusout', ev => {
+		if (ev.target.tagName === 'TD') {
+			if (savedValue !== ev.target.textContent) {
+				save = true;
+				if (ev.target.dataset.columnId === 'status') {
+					if (ev.target.textContent < 10 || ev.target.textContent > 99) {
+						save = false;
+						ev.target.textContent = savedValue;
+						ev.target.focus();
+					}
+				}
+				if (save) {
+					const csrf_token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+					fetch('/api/data', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-CSRFToken': csrf_token
+						},
+						body: JSON.stringify({
+							id: ev.target.dataset.elementId,
+							[ev.target.dataset.columnId]: ev.target.textContent
+						}),
+					});
+					savedValue = undefined;
+				}
+			}
+		}
+	});
+
+	tableDiv.addEventListener('keydown', ev => {
+		if (ev.target.tagName === 'TD') {
+			if (ev.key === 'Escape') {
+				ev.target.textContent = savedValue;
+				ev.target.blur();
+			}
+			else if (ev.key === 'Enter') {
+				ev.preventDefault();
+				ev.target.blur();
+			}
+		}
+	});
+</script>
+{% endblock %}
